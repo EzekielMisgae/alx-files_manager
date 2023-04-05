@@ -1,56 +1,37 @@
-const { MongoClient } = require('mongodb');
+import { MongoClient } from 'mongodb';
+
+const HOST = process.env.DB_HOST || 'localhost';
+const PORT = process.env.DB_PORT || 27017;
+const DATABASE = process.env.DB_DATABASE || 'files_manager';
+
+const url = `mongodb://${HOST}:${PORT}`;
 
 class DBClient {
   constructor() {
-    const host = process.env.DB_HOST || 'localhost';
-    const port = process.env.DB_PORT || 27017;
-    const database = process.env.DB_DATABASE || 'files_manager';
-
-    const url = `mongodb://${host}:${port}/${database}`;
-    this.client = new MongoClient(url);
+    this.client = new MongoClient(url, { useUnifiedTopology: true, useNewUrlParser: true });
+    this.client.connect().then(() => {
+      this.db = this.client.db(`${DATABASE}`);
+    }).catch((err) => {
+      console.log(err);
+    });
   }
 
-  async isAlive() {
-    try {
-      await this.client.connect();
-      return true;
-    } catch (error) {
-      return false;
-    } finally {
-      await this.client.close();
-    }
+  isAlive() {
+    return this.client.isConnected();
   }
 
   async nbUsers() {
-    try {
-      await this.client.connect();
-      const db = this.client.db();
-      const collection = db.collection('users');
-      const count = await collection.countDocuments();
-      return count;
-    } catch (error) {
-      console.log(error);
-      return -1;
-    } finally {
-      await this.client.close();
-    }
+    const users = this.db.collection('users');
+    const usersNum = await users.countDocuments();
+    return usersNum;
   }
 
   async nbFiles() {
-    try {
-      await this.client.connect();
-      const db = this.client.db();
-      const collection = db.collection('files');
-      const count = await collection.countDocuments();
-      return count;
-    } catch (error) {
-      console.log(error);
-      return -1;
-    } finally {
-      await this.client.close();
-    }
+    const files = this.db.collection('files');
+    const filesNum = await files.countDocuments();
+    return filesNum;
   }
 }
 
-const dbClient = new DBClient();
-module.exports = dbClient;
+const newDBClient = new DBClient();
+module.exports = newDBClient;
